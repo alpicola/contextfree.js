@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width"> 
+        <title>contextfree.js</title>
+        <script type="text/javascript" src="contextfree.js"></script>
+        <script type="text/javascript" src="cfdg.js"></script>
+        <script type="text/javascript">
+            window.onload = function() {
+                var contextfree;
+                var message = document.querySelector('.message');
+                function render() {
+                    if (contextfree) contextfree.stop();
+                    try {
+                        var src = document.querySelector('textarea').value;
+                        contextfree = new ContextFree(src, document.getElementById('canvas'));
+                        contextfree.render(function() {
+                            message.textContent = 'finish';
+                        });
+                        message.textContent = 'rendering...';
+                    } catch (e) {
+                        message.textContent = e.toString();
+                    }
+                }
+                document.querySelector('input').addEventListener('click', render, false);
+            };
+        </script>
+        <style type="text/css">
+            * {
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                margin: 0;
+                padding: 0.5em;
+                font-size: 16px;
+            }
+            h1 {
+                margin: 10px auto 20px;
+                width: 980px;
+                font-size: 200%;
+            }
+            #content {
+                margin: 0 auto;
+                width: 980px;
+            }
+            #canvas {
+                display: block;
+                float: left;
+                border: 1px solid #666;
+            }
+            #edit {
+                float: right;
+                width: 350px;
+            }
+            #edit textarea {
+                display: block;
+                font-size: 90%;
+                font-family: monospace;
+                padding: 4px; 
+                width: 340px;
+            }
+            #edit p {
+                margin: 5px 0;
+                float: left;
+                width: 20%;
+            }
+            #edit pre {
+                margin: 10px 0;
+                float: right;
+                font-size: 80%;
+                width: 80%;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>contextfree.js</h1>
+        <div id="content">
+            <canvas id="canvas" width="600" height="600"></canvas>
+            <div id="edit">
+                <textarea rows="20">startshape R
+
+size { size 15 y 5 }
+
+rule R {
+    SQUARE {}
+    2 * { f 90 } R { s 1 .6 r 90 y -5 }
+}</textarea>
+                <p><input type="button" value="render"></p>
+                <pre class="message"></pre>
+            </div>
+        </div>
+    </body>
+</html>
