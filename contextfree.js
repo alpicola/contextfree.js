@@ -9,8 +9,7 @@ ContextFree = function(source, canvas) {
     this.rules = {};
     this.x = this.y = 0;
     this.width = this.height = 3;
-    var source = CFDG.parse(source)
-    source.forEach(function(statement) {
+    CFDG.parse(source).forEach(function(statement) {
         var rule, adjustment;
         switch (statement[0]) {
             case 'STARTSHAPE':
@@ -293,14 +292,14 @@ function adjustTransform(transform, adj) {
     ];
 }
 
-function adjustColor(color, adj) {
+function adjustColor(color, colorAdj) {
     color = color.slice();
-    if (adj[0] != 0) {
+    if (colorAdj[0] != 0) {
         color[0] += colorAdj[0];
         color[0] %= 360;
     }
     for (var i = 1; i < 4; i++) {
-        var a = adj[i];
+        var a = colorAdj[i];
         if (a > 0) {
             color[i] += (1-color[i]) * a;
         } else if (a < 0) {
