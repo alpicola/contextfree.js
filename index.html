@@ -8,13 +8,15 @@
         <script type="text/javascript" src="cfdg.js"></script>
         <script type="text/javascript">
             window.onload = function() {
+                var canvas = document.getElementById('canvas')
+
                 var contextfree;
                 var message = document.querySelector('.message');
                 function render() {
                     if (contextfree) contextfree.stop();
                     try {
                         var src = document.querySelector('textarea').value;
-                        contextfree = new ContextFree(src, document.getElementById('canvas'));
+                        contextfree = new ContextFree(src, canvas);
                         contextfree.render(function() {
                             message.textContent = 'finish';
                         });
@@ -23,6 +25,7 @@
                         message.textContent = e.toString();
                     }
                 }
+                //render();
                 document.querySelector('input').addEventListener('click', render, false);
             };
         </script>
@@ -56,7 +59,7 @@
             }
             #edit textarea {
                 display: block;
-                font-size: 90%;
+                font-size: 75%;
                 font-family: monospace;
                 padding: 4px; 
                 width: 340px;
@@ -69,8 +72,9 @@
             #edit pre {
                 margin: 10px 0;
                 float: right;
-                font-size: 80%;
+                font-size: 75%;
                 width: 80%;
+                white-space: pre-wrap;
             }
         </style>
     </head>
@@ -79,13 +83,22 @@
         <div id="content">
             <canvas id="canvas" width="600" height="600"></canvas>
             <div id="edit">
-                <textarea rows="20">startshape R
+                <textarea rows="20">// original: Kochlea by zol
+// licensed: Creative Commons Attribution-ShareAlike 3.0
 
-size { size 15 y 5 }
+background { b -1 }
+startshape init
 
-rule R {
-    SQUARE {}
-    2 * { f 90 } R { s 1 .6 r 90 y -5 }
+rule init {
+    turn [ b 1 a -1 sat 1 h 310 ]
+}
+
+rule turn {
+    SQUARE [ x .5 y -.05 s 1 .1 ]
+    CIRCLE [ x 1.77 y .13 s .5 ]
+    turn [ z 1 r -2.07028 s 0.298966 a .1 h 90 sat -.3 ]
+    turn [ z 1 x 1 r 45.9297 s .324258 a .1 sat .1 ]
+    turn [ z 1 x 1.72574 y .806014 r -48 s .922 ]
 }</textarea>
                 <p><input type="button" value="render"></p>
                 <pre class="message"></pre>
