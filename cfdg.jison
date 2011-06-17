@@ -3,6 +3,7 @@
 
 \s+                       /* skip */
 "//".*                    /* ignore comment */
+"/*".*?"*/"               /* ignore comment */
 
 "startshape"              return 'STARTSHAPE';
 "background"              return 'BACKGROUND';
@@ -215,6 +216,45 @@ e
         { $$ = -$2; }
     | '(' e ')'
         { $$ = $2; }
+    | id '(' e ')'
+        {{
+            switch ($1) {
+                case 'cos':
+                case 'sin':
+                case 'tan':
+                    $$ = Math[$1]($3 * Math.PI / 180);
+                    break;
+                case 'acos':
+                case 'asin':
+                case 'atan':
+                    $$ = Math[$1]($3) / Math.PI * 180;
+                    break;
+                case 'log':
+                case 'exp':
+                case 'sqrt':
+                case 'abs':
+                    $$ = Math[$1]($3);
+                    break;
+                case 'log10':
+                    $$ = Math.log($3) * Math.LOG10E;
+                    break;
+                default:
+                    throw new Error('function \'' + $1 + '\' is not defined');
+            }
+        }}
+    | id '(' e ',' e ')'
+        {{
+            switch ($1) {
+                case 'atan2':
+                    $$ = Math.atan2($3, $5) / Math.PI * 180;
+                    break;
+                case 'mod':
+                    $$ = $3 % $5;
+                    break;
+                default:
+                    throw new Error('function \'' + $1 + '\' is not defined');
+            }
+        }}
     | n
     ;
 
