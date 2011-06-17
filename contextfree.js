@@ -86,7 +86,7 @@ ContextFree = function(source, canvas) {
     }
 
     var n = 0;
-    Object.keys(this.primitives).forEach(function(primitive) {
+    for (var primitive in this.primitives) (function(primitive) {
         this.rules[primitive] = [{
             replacements: [function(transform, color, targetColor, z, zScale) {
                 var area = Math.abs(transform[0] * transform[3] - transform[1] * transform[2]);
@@ -135,7 +135,7 @@ ContextFree = function(source, canvas) {
             }],
             probability: 1
         }];
-    }, this);
+    }).call(this, primitive);
 
     if (this.clip) {
         this.scale = Math.min(
