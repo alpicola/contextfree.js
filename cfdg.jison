@@ -160,9 +160,11 @@ geom_adjustment
     | ROTATE e
         { $$ = ['ROTATE', $2]; }
     | SIZE e
-        { $$ = ['SIZE', $2, $2]; }
+        { $$ = ['SIZE', $2, $2, 1]; }
     | SIZE e e
-        { $$ = ['SIZE', $2, $3]; }
+        { $$ = ['SIZE', $2, $3, 1]; }
+    | SIZE e e e
+        { $$ = ['SIZE', $2, $3, $4]; }
     | SKEW e e
         { $$ = ['SKEW', $2, $3]; }
     | FLIP e
@@ -178,6 +180,22 @@ color_adjustment
         { $$ = ['BRIGHTNESS', $2]; }
     | ALPHA e
         { $$ = ['ALPHA', $2]; }
+    | HUE e '|'
+        { $$ = ['HUE', $2, true]; }
+    | SATURATION e '|'
+        { $$ = ['SATURATION', $2, true]; }
+    | BRIGHTNESS e '|'
+        { $$ = ['BRIGHTNESS', $2, true]; }
+    | ALPHA e '|'
+        { $$ = ['ALPHA', $2, true]; }
+    | TARGETHUE e
+        { $$ = ['TARGETHUE', $2]; }
+    | TARGETSATURATION e
+        { $$ = ['TARGETSATURATION', $2]; }
+    | TARGETBRIGHTNESS e
+        { $$ = ['TARGETBRIGHTNESS', $2]; }
+    | TARGETALPHA e
+        { $$ = ['TARGETALPHA', $2]; }
     ;
 
 e

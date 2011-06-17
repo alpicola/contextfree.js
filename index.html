@@ -9,23 +9,24 @@
         <script type="text/javascript">
             window.onload = function() {
                 var canvas = document.getElementById('canvas')
-
-                var contextfree;
                 var message = document.querySelector('.message');
+                var contextfree;
+
                 function render() {
                     if (contextfree) contextfree.stop();
                     try {
                         var src = document.querySelector('textarea').value;
+                        var start = Date.now();
                         contextfree = new ContextFree(src, canvas);
                         contextfree.render(function() {
-                            message.textContent = 'finish';
+                            message.textContent = 'finished (' + (Date.now() - start) + 'ms)';
                         });
                         message.textContent = 'rendering...';
                     } catch (e) {
                         message.textContent = e.toString();
                     }
                 }
-                //render();
+
                 document.querySelector('input').addEventListener('click', render, false);
             };
         </script>

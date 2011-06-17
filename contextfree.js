@@ -39,8 +39,8 @@ ContextFree = function(source, canvas) {
                 this.startshape = statement[1];
                 break;
             case 'BACKGROUND':
-                var adjustment = this.compileAdjustments(statement[1]);
-                this.background = this.adjustColor([0, 0, 1, 1], adjustment[1]);
+                var adjustment = this.compileAdjustment(statement[1]);
+                this.background = this.adjustColor([0, 0, 1, 1], adjustment.color);
                 break;
             case 'SIZE':
                 this.clip = true;
@@ -88,7 +88,7 @@ ContextFree = function(source, canvas) {
     var n = 0;
     Object.keys(this.primitives).forEach(function(primitive) {
         this.rules[primitive] = [{
-            replacements: [function(transform, color) {
+            replacements: [function(transform, color, targetColor, z, zScale) {
                 var area = Math.abs(transform[0] * transform[3] - transform[1] * transform[2]);
                 if (area * this.scale * this.scale < 0.3) return;
 
@@ -96,7 +96,8 @@ ContextFree = function(source, canvas) {
                     type: primitive,
                     transform: transform,
                     color: color,
-                    area: area
+                    area: area,
+                    z: z
                 };
                 this.shapes.push(shape);
 
@@ -150,6 +151,20 @@ ContextFree = function(source, canvas) {
     }
 };
 
+ContextFree.prototype.render = function(callback) {
+    this.callback = callback;
+
+    this.context.setTransform(1, 0, 0, 1, 0, 0);
+    if (this.background) {
+        this.context.fillStyle = 'rgba(' + hsv2rgb.apply(null, this.background) + ')';
+        this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    } else {
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    this.expandShape();
+};
+
 ContextFree.prototype.loop = function(loop, callback) {
     if (this.intervalID) {
         window.clearInterval(this.intervalID);
@@ -184,25 +199,17 @@ ContextFree.prototype.stop = function() {
     }
 };
 
-ContextFree.prototype.render = function(callback) {
-    this.callback = callback;
-
-    this.context.setTransform(1, 0, 0, 1, 0, 0);
-    if (this.background) {
-        this.context.fillStyle = 'rgba(' + hsv2rgb.apply(null, this.background) + ')';
-        this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    } else {
-        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    }
-
-    this.expandShape();
-};
-
 ContextFree.prototype.expandShape = function() {
-    this.shapes = [];
+    var modification = [
+        [1, 0, 0, 1, 0, 0],
+        [0, 0, 0, 1],
+        [0, 0, 0, 1],
+        0, 1
+    ];
     this.queue = this.getRule(this.startshape).map(function(replacement) {
-        return function() { replacement.call(this, [1, 0, 0, 1, 0, 0], [0, 0, 0, 1]); };
+        return function() { replacement.apply(this, modification); };
     });
+    this.shapes = [];
 
     this.loop(function() {
         if (this.queue.length) {
@@ -213,7 +220,7 @@ ContextFree.prototype.expandShape = function() {
 };
 
 ContextFree.prototype.drawShape = function() {
-    this.shapes.sort(function(a, b) { return a.area - b.area; });
+    this.shapes.sort(function(a, b) { return b.z - a.z || a.area - b.area; });
     var i = 0, len = this.shapes.length;
     while (i < len && this.shapes[i].area * this.scale * this.scale < 0.3) i++;
     this.shapes.splice(0, i);
@@ -265,43 +272,55 @@ ContextFree.prototype.getRule = function(id) {
 };
 
 ContextFree.prototype.compileReplacement = function(replacement) {
-    var adjustments = this.compileAdjustments(replacement[2]);
-    var geomAdj  = adjustments[0];
-    var colorAdj = adjustments[1];
+    var adjustment = this.compileAdjustment(replacement[2]);
 
     if (replacement[0] == 'REPLACEMENT') {
-        return function(transform, color) {
+        return function(transform, color, targetColor, z, zScale) {
             var area = Math.abs(transform[0] * transform[3] - transform[1] * transform[2]);
             if (area * this.scale * this.scale < 0.3) return;
 
-            transform = this.adjustTransform(transform, geomAdj);
-            color = this.adjustColor(color, colorAdj);
+            transform = this.adjustTransform(transform, adjustment.transform);
+            if (adjustment.color.length) {
+                color = this.adjustColor(color, adjustment.color, targetColor);
+            }
+            if (adjustment.targetColor.length) {
+                targetColor = this.adjustColor(targetColor, adjustment.targetColor);
+            }
+            z += adjustment.z * zScale;
+            zScale *= adjustment.zScale;
 
+            var modification = [transform, color, targetColor, z, zScale];
             [].push.apply(this.queue, this.getRule(replacement[1]).map(function(replacement) {
-                return function() { replacement.call(this, transform, color); };
+                return function() { replacement.apply(this, modification); };
             }));
         };
     }
     
     if (replacement[0] == 'REPLACEMENT_LOOP') {
         var replacements = replacement[3].map(this.compileReplacement, this);
-        return function(transform, color) {
+        return function(transform, color, targetColor, z, zScale) {
             var area = Math.abs(transform[0] * transform[3] - transform[1] * transform[2]);
             if (area * this.scale * this.scale < 0.3) return;
 
             var n = replacement[1];
-            for (;;) {
-                (function(transform, color) {
-                    [].push.apply(this.queue, replacements.map(function(replacement) {
-                        return function() { replacement.call(this, transform, color); };
-                    }));
-                }).call(this, transform, color);
+            while (n--) (function() {
+                var modification = [transform, color, targetColor, z, zScale];
+                [].push.apply(this.queue, replacements.map(function(replacement) {
+                    return function() { replacement.apply(this, modification); };
+                }));
 
-                if (!(--n)) break;
+                if (!n) return; 
 
-                transform = this.adjustTransform(transform, geomAdj);
-                color = this.adjustColor(color, colorAdj);
-            }
+                transform = this.adjustTransform(transform, adjustment.transform);
+                if (adjustment.color.length) {
+                    color = this.adjustColor(color, adjustment.color, targetColor);
+                }
+                if (adjustment.targetColor.length) {
+                    targetColor = this.adjustColor(targetColor, adjustment.targetColor);
+                }
+                z += adjustment.z * zScale;
+                zScale *= adjustment.zScale;
+            }).call(this);
         };
     }
 };
@@ -309,114 +328,132 @@ ContextFree.prototype.compileReplacement = function(replacement) {
 ContextFree.prototype.compilePath = function(path) {
 };
 
-ContextFree.prototype.compileAdjustments = function(adjustments) {
-    if (adjustments[2]) {
-        adjustments = adjustments[1];
-    } else {
-        var o = {};
-        var geomAdjustments = 'XSHIFT YSHIFT ROTATE SIZE SKEW FLIP'.split(' ');
-        adjustments = adjustments[1].filter(function(adjustment) {
-            if (geomAdjustments.indexOf(adjustment[0]) != -1) {
-                o[adjustment[0]] = adjustment;
-                return false;
-            } else {
-                return true
-            }
-        });
-        geomAdjustments.forEach(function(manuplation) {
-            if (manuplation in o) adjustments.push(o[manuplation]);
-        });
-    }
-
+ContextFree.prototype.compileAdjustment = function(adjustments) {
+    var geomAdjustments = ['XSHIFT', 'YSHIFT', 'ZSHIFT', 'ROTATE', 'SIZE', 'SKEW', 'FLIP'];
+    var colorAdjustments = ['HUE', 'SATURATION', 'BRIGHTNESS', 'ALPHA'];
     var transform = [1, 0, 0, 1, 0, 0];
-    var color = [0, 0, 0, 0];
+    var color = [];
+    var targetColor = [];
+    var z = 0;
+    var zScale = 1;
+
+    var orderd = adjustments[2];
+    adjustments = adjustments[1].slice();
     adjustments.forEach(function(adjustment) {
-        var c, s, t;
+        adjustments[adjustment[0]] = adjustment;
+    });
+
+    (orderd ? adjustments : geomAdjustments.reduce(function(result, type) {
+        if (type in adjustments) result.push(adjustments[type]);
+        return result;
+    }, [])).forEach(function(adjustment) {
+        var x, y, c, s;
         switch (adjustment[0]) {
             case 'XSHIFT':
-                transform[4] += transform[0] * adjustment[1];
-                transform[5] += transform[1] * adjustment[1];
+                x = adjustment[1];
+                transform = this.adjustTransform(transform, [1, 0, 0, 1, x, 0]); 
                 break;
             case 'YSHIFT':
-                transform[4] += transform[2] * adjustment[1];
-                transform[5] += transform[3] * adjustment[1];
+                y = adjustment[1];
+                transform = this.adjustTransform(transform, [1, 0, 0, 1, 0, y]); 
+                break;
+            case 'ZSHIFT':
+                z += adjustment[1];
                 break;
             case 'ROTATE':
-                c =  Math.cos(Math.PI * adjustment[1] / 180);
-                s = -Math.sin(Math.PI * adjustment[1] / 180);
-                t = transform.slice(0, 4);
-                transform[0] = t[0] * c - t[2] * s;
-                transform[1] = t[1] * c - t[3] * s;
-                transform[2] = t[0] * s + t[2] * c;
-                transform[3] = t[1] * s + t[3] * c;
+                c = Math.cos(Math.PI * adjustment[1] / 180);
+                s = Math.sin(Math.PI * adjustment[1] / 180);
+                transform = this.adjustTransform(transform, [c, s, -s, c, 0, 0]); 
                 break;
             case 'SIZE':
-                transform[0] *= adjustment[1];
-                transform[1] *= adjustment[1];
-                transform[2] *= adjustment[2];
-                transform[3] *= adjustment[2];
+                x = adjustment[1];
+                y = adjustment[2];
+                transform = this.adjustTransform(transform, [x, 0, 0, y, 0, 0]); 
+                zScale *= adjustment[3];
                 break;
             case 'SKEW':
-                c = Math.tan(Math.PI * adjustment[1] / 180);
-                s = Math.tan(Math.PI * adjustment[2] / 180);
-                t = transform.slice(0, 4);
-                transform[0] += t[1] * s;
-                transform[1] += t[3] * s;
-                transform[2] += t[0] * c;
-                transform[3] += t[2] * c;
+                x = Math.tan(Math.PI * adjustment[1] / 180);
+                y = Math.tan(Math.PI * adjustment[2] / 180);
+                transform = this.adjustTransform(transform, [1, y, x, 1, 0, 0]); 
                 break;
             case 'FLIP':
                 c = Math.cos(Math.PI * adjustment[1] / 90);
                 s = Math.sin(Math.PI * adjustment[1] / 90);
-                t = transform.slice(0, 4);
-                transform[0] = t[0] * c + t[2] * s;
-                transform[1] = t[1] * c + t[3] * s;
-                transform[2] = t[0] * s - t[2] * c;
-                transform[3] = t[1] * s - t[3] * c;
-                break;
-            case 'HUE':
-                color[0] = adjustment[1];
-                break;
-            case 'SATURATION':
-                color[1] = adjustment[1];
-                break;
-            case 'BRIGHTNESS':
-                color[2] = adjustment[1];
-                break;
-            case 'ALPHA':
-                color[3] = adjustment[1];
+                transform = this.adjustTransform(transform, [c, s, s, -c, 0, 0]); 
                 break;
         }
     }, this);
 
-    return [transform, color];
+    colorAdjustments.forEach(function(type, i) {
+        var adjustment;
+        if (adjustment = adjustments[type]) {
+            color[i] = adjustment[1];
+            if (adjustment[2]) color[4] |= (1 << i);
+        }
+        if (adjustment = adjustments['TARGET' + type]) {
+            targetColor[i] = adjustment[1];
+        }
+    });
+
+    return {
+        transform: transform,
+        color: color,
+        targetColor: targetColor,
+        z: z,
+        zScale: zScale
+    };
 };
 
-ContextFree.prototype.adjustTransform  = function(transform, adj) {
+ContextFree.prototype.adjustTransform  = function(transform, adjustment) {
     return [
-        transform[0] * adj[0] + transform[2] * adj[1],
-        transform[1] * adj[0] + transform[3] * adj[1],
-        transform[0] * adj[2] + transform[2] * adj[3],
-        transform[1] * adj[2] + transform[3] * adj[3],
-        transform[0] * adj[4] + transform[2] * adj[5] + transform[4],
-        transform[1] * adj[4] + transform[3] * adj[5] + transform[5]
+        transform[0] * adjustment[0] + transform[2] * adjustment[1],
+        transform[1] * adjustment[0] + transform[3] * adjustment[1],
+        transform[0] * adjustment[2] + transform[2] * adjustment[3],
+        transform[1] * adjustment[2] + transform[3] * adjustment[3],
+        transform[0] * adjustment[4] + transform[2] * adjustment[5] + transform[4],
+        transform[1] * adjustment[4] + transform[3] * adjustment[5] + transform[5]
     ];
 };
 
-ContextFree.prototype.adjustColor = function(color, colorAdj) {
+ContextFree.prototype.adjustColor = function(color, adjustment, target) {
     color = color.slice();
-    if (colorAdj[0] != 0) {
-        color[0] += colorAdj[0];
+    var a, t;
+
+    if (a = adjustment[0]) {
+        if (adjustment[4] & 1) {
+            t = target[0];
+            if (a > 0) {
+                if (t < color[0]) t += 360;
+                color[0] += (t - color[0]) * a;
+            } else {
+                if (t > color[0]) t -= 360;
+                color[0] += (color[0] - t) * a;
+            }
+        } else {
+            color[0] += adjustment[0];
+        }
         color[0] %= 360;
+        if (color[0] < 0) color[0] += 360;
     }
+
     for (var i = 1; i < 4; i++) {
-        var a = colorAdj[i];
-        if (a > 0) {
-            color[i] += (1-color[i]) * a;
-        } else if (a < 0) {
-            color[i] += color[i] * a;
+        if (a = adjustment[i]) {
+            if (adjustment[4] & (1 << i)) {
+                if (a > 0) {
+                    color[i] += (target[i] - color[i]) * a;
+                } else {
+                    color[i] += (color[i] - (color[i] < target[i] ? 0 : 1)) * a;
+                }
+            } else {
+                if (a > 0) {
+                    color[i] += (1 - color[i]) * a;
+                } else {
+                    color[i] += color[i] * a;
+                }
+            }
         }
     }
+
     return color;
 };
 
