@@ -3,7 +3,7 @@
 
 \s+                       /* skip */
 "//".*                    /* ignore comment */
-"/*".*?"*/"               /* ignore comment */
+"/*"[\w\W]*?"*/"               /* ignore comment */
 
 "startshape"              return 'STARTSHAPE';
 "background"              return 'BACKGROUND';

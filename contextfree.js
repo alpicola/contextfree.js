@@ -10,8 +10,8 @@ ContextFree = function(source, canvas) {
     this.x = this.y = 0;
     this.left = this.top = 0;
     this.right = this.bottom = 0;
-    this.width = this.height = 3;
-    this.scale = Math.min(canvas.width, canvas.height) / 3;
+    this.width = this.height = 1;
+    this.scale = Math.min(canvas.width, canvas.height);
     this.clip = false;
     this.rules = {};
     this.primitives = {
@@ -62,7 +62,7 @@ ContextFree = function(source, canvas) {
             case 'RULE':
                 var rule = {
                     weight: statement[2],
-                    replacements: statement[3].map(this.compileReplacement, this)
+                    replacements: statement[3]
                 };
                 if (this.rules[statement[1]] != null) {
                     this.rules[statement[1]].push(rule);
@@ -76,24 +76,16 @@ ContextFree = function(source, canvas) {
         }
     }, this);
 
-    for (var name in this.rules) {
-        var sum = this.rules[name].reduce(function(sum, rule) {
-            return sum + rule.weight
-        }, 0);
-        this.rules[name].forEach(function(rule) {
-            rule.probability = rule.weight / sum;
-        });
-    }
-
     var n = 0;
-    for (var primitive in this.primitives) (function(primitive) {
-        this.rules[primitive] = [{
+    for (var name in this.primitives) (function() {
+        var render = this.primitives[name];
+        this.rules[name] = [{
             replacements: [function(transform, color, targetColor, z, zScale) {
                 var area = Math.abs(transform[0] * transform[3] - transform[1] * transform[2]);
                 if (area * this.scale * this.scale < 0.3) return;
 
                 var shape = {
-                    type: primitive,
+                    render: render,
                     transform: transform,
                     color: color,
                     area: area,
@@ -135,7 +127,19 @@ ContextFree = function(source, canvas) {
             }],
             probability: 1
         }];
-    }).call(this, primitive);
+    }).call(this);
+
+    for (var name in this.rules) {
+        if (name in this.primitives) continue;
+
+        var sum = this.rules[name].reduce(function(sum, rule) {
+            return sum + rule.weight
+        }, 0);
+        this.rules[name].forEach(function(rule) {
+            rule.probability = rule.weight / sum;
+            rule.replacements = rule.replacements.map(this.compileReplacement, this);
+        }, this);
+    }
 
     if (this.clip) {
         this.scale = Math.min(
@@ -170,20 +174,24 @@ ContextFree.prototype.loop = function(loop, callback) {
         window.clearInterval(this.intervalID);
     }
 
+    var c = 0;
     var that = this;
     var intervalID = this.intervalID = window.setInterval(function() {
-        var c = true;
+        var v = true;
         var start = Date.now();
         do {
             var n = 1000;
-            while (--n && c) {
-                c = loop.call(that);
+            while (--n && v) {
+                v = loop.call(that);
             }
-        } while (Date.now() - start < 30 && c);
+        } while (Date.now() - start < 30 && v);
 
-        if (!c) {
+        if (!v) {
             window.clearInterval(intervalID)
             callback.call(that);
+        } else if (c++ > 3000) {
+            window.clearInterval(intervalID)
+            throw new Error('too much shapes');
         }
     }, 30);
 };
@@ -206,9 +214,10 @@ ContextFree.prototype.expandShape = function() {
         [0, 0, 0, 1],
         0, 1
     ];
-    this.queue = this.getRule(this.startshape).map(function(replacement) {
-        return function() { replacement.apply(this, modification); };
-    });
+    var startshape = this.compileReplacement([
+        'REPLACEMENT', this.startshape, ['ADJUSTMENTS', []]
+    ]);
+    this.queue = [function() { startshape.apply(this, modification); }]
     this.shapes = [];
 
     this.loop(function() {
@@ -247,34 +256,21 @@ ContextFree.prototype.drawShape = function() {
             this.context.save();
             this.context.transform.apply(this.context, shape.transform);
             this.context.fillStyle = 'rgba(' + hsv2rgb.apply(null, shape.color).join() + ')';
-            this.primitives[shape.type].call(this);
+            shape.render.call(this);
             this.context.restore();
         }
         return this.shapes.length;
     }, this.stop);
 };
 
-ContextFree.prototype.getRule = function(id) {
-    var rules = this.rules[id];
-    if (rules == null) {
-        this.stop();
-        throw new Error('rule \'' + id + '\' is not defined');
-    }
-    if (rules.length == 1) {
-        return rules[0].replacements;
-    } else {
-        var p = 0, r = Math.random();
-        for (var i = 0, len = rules.length; i < len; i++) {
-            p += rules[i].probability;
-            if (r < p) return rules[i].replacements;
-        }
-    }
-};
-
 ContextFree.prototype.compileReplacement = function(replacement) {
     var adjustment = this.compileAdjustment(replacement[2]);
 
     if (replacement[0] == 'REPLACEMENT') {
+        var rules = this.rules[replacement[1]];
+        if (rules == null) {
+            throw new Error('rule \'' + replacement[1] + '\' is not defined');
+        }
         return function(transform, color, targetColor, z, zScale) {
             var area = Math.abs(transform[0] * transform[3] - transform[1] * transform[2]);
             if (area * this.scale * this.scale < 0.3) return;
@@ -289,8 +285,22 @@ ContextFree.prototype.compileReplacement = function(replacement) {
             z += adjustment.z * zScale;
             zScale *= adjustment.zScale;
 
+            var rule;
+            if (rules.length > 1) {
+                var p = 0, r = Math.random();
+                for (var i = 0, len = rules.length; i < len; i++) {
+                    p += rules[i].probability;
+                    if (r < p) {
+                        rule = rules[i];
+                        break;
+                    }
+                }
+            } else {
+                rule = rules[0];
+            }
+
             var modification = [transform, color, targetColor, z, zScale];
-            [].push.apply(this.queue, this.getRule(replacement[1]).map(function(replacement) {
+            [].push.apply(this.queue, rule.replacements.map(function(replacement) {
                 return function() { replacement.apply(this, modification); };
             }));
         };

@@ -554,7 +554,7 @@ case 48:return 55;
 break;
 }
 };
-lexer.rules = [/^\s+/,/^\/\/.*/,/^\/\*.*?\*\//,/^startshape\b/,/^background\b/,/^rule\b/,/^\{/,/^\}/,/^\[/,/^\]/,/^\^/,/^\*/,/^\//,/^\+/,/^-/,/^\(/,/^\)/,/^,/,/^rotate\b/,/^r\b/,/^flip\b/,/^f\b/,/^hue\b/,/^h\b/,/^saturation\b/,/^sat\b/,/^brightness\b/,/^b\b/,/^alpha\b/,/^a\b/,/^x\b/,/^y\b/,/^z\b/,/^size\b/,/^s\b/,/^skew\b/,/^\|hue\b/,/^\|h\b/,/^\|saturation\b/,/^\|sat\b/,/^\|brightness\b/,/^\|b\b/,/^\|alpha\b/,/^\|a\b/,/^\|/,/^$/,/^[0-9]+(\.[0-9]*)?/,/^\.[0-9]+/,/^[a-zA-Z_]+[a-zA-Z0-9_]*/];
+lexer.rules = [/^\s+/,/^\/\/.*/,/^\/\*[\w\W]*?\*\//,/^startshape\b/,/^background\b/,/^rule\b/,/^\{/,/^\}/,/^\[/,/^\]/,/^\^/,/^\*/,/^\//,/^\+/,/^-/,/^\(/,/^\)/,/^,/,/^rotate\b/,/^r\b/,/^flip\b/,/^f\b/,/^hue\b/,/^h\b/,/^saturation\b/,/^sat\b/,/^brightness\b/,/^b\b/,/^alpha\b/,/^a\b/,/^x\b/,/^y\b/,/^z\b/,/^size\b/,/^s\b/,/^skew\b/,/^\|hue\b/,/^\|h\b/,/^\|saturation\b/,/^\|sat\b/,/^\|brightness\b/,/^\|b\b/,/^\|alpha\b/,/^\|a\b/,/^\|/,/^$/,/^[0-9]+(\.[0-9]*)?/,/^\.[0-9]+/,/^[a-zA-Z_]+[a-zA-Z0-9_]*/];
 lexer.conditions = {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48],"inclusive":true}};return lexer;})()
 parser.lexer = lexer;
 return parser;
