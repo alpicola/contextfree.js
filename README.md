@@ -1,7 +1,9 @@
 contextfree.js
 ==============
 
-JavaScript Implementation of [Context Free](http://www.contextfreeart.org/)
+JavaScript Implementation of [Context Free](http://www.contextfreeart.org/).
+
+Almost compatible with Context Free 2.x, but tile directive and path directive are not supported yet.
 
 Usage
 -----
@@ -12,7 +14,9 @@ Usage
         window.onload = function() {
             var src = '....'; // cfdg source
             var contextfree = new ContextFree(src, document.querySelector('canvas'));
-            contextfree.render();
+            contextfree.render(function() {
+                ... // called when rendering is done
+            });
         };
     </script>
 
