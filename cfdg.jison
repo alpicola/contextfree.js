@@ -3,7 +3,7 @@
 
 \s+                       /* skip */
 "//".*                    /* ignore comment */
-"/*"[\w\W]*?"*/"               /* ignore comment */
+"/*"[\w\W]*?"*/"          /* ignore comment */
 
 "startshape"              return 'STARTSHAPE';
 "background"              return 'BACKGROUND';
@@ -152,55 +152,67 @@ adjustment
     ;
 
 geom_adjustment
-    : XSHIFT e
+    : XSHIFT num
         { $$ = ['XSHIFT', $2]; }
-    | YSHIFT e
+    | YSHIFT num
         { $$ = ['YSHIFT', $2]; }
-    | ZSHIFT e
+    | ZSHIFT num
         { $$ = ['ZSHIFT', $2]; }
-    | ROTATE e
+    | ROTATE num
         { $$ = ['ROTATE', $2]; }
-    | SIZE e
+    | SIZE num
         { $$ = ['SIZE', $2, $2, 1]; }
-    | SIZE e e
+    | SIZE num num
         { $$ = ['SIZE', $2, $3, 1]; }
-    | SIZE e e e
+    | SIZE num num num
         { $$ = ['SIZE', $2, $3, $4]; }
-    | SKEW e e
+    | SKEW num num
         { $$ = ['SKEW', $2, $3]; }
-    | FLIP e
+    | FLIP num
         { $$ = ['FLIP', $2]; }
     ;
 
 color_adjustment
-    : HUE e
+    : HUE num
         { $$ = ['HUE', $2]; }
-    | SATURATION e
+    | SATURATION num
         { $$ = ['SATURATION', $2]; }
-    | BRIGHTNESS e
+    | BRIGHTNESS num
         { $$ = ['BRIGHTNESS', $2]; }
-    | ALPHA e
+    | ALPHA num
         { $$ = ['ALPHA', $2]; }
-    | HUE e '|'
+    | HUE num '|'
         { $$ = ['HUE', $2, true]; }
-    | SATURATION e '|'
+    | SATURATION num '|'
         { $$ = ['SATURATION', $2, true]; }
-    | BRIGHTNESS e '|'
+    | BRIGHTNESS num '|'
         { $$ = ['BRIGHTNESS', $2, true]; }
-    | ALPHA e '|'
+    | ALPHA num '|'
         { $$ = ['ALPHA', $2, true]; }
-    | TARGETHUE e
+    | TARGETHUE num
         { $$ = ['TARGETHUE', $2]; }
-    | TARGETSATURATION e
+    | TARGETSATURATION num
         { $$ = ['TARGETSATURATION', $2]; }
-    | TARGETBRIGHTNESS e
+    | TARGETBRIGHTNESS num
         { $$ = ['TARGETBRIGHTNESS', $2]; }
-    | TARGETALPHA e
+    | TARGETALPHA num
         { $$ = ['TARGETALPHA', $2]; }
     ;
 
+num
+    : n
+    | '+' n
+        { $$ = $2; }
+    | '-' n
+        { $$ = -$2; }
+    | '(' e ')'
+        { $$ = $2; }
+    | function
+    ;
+
 e
-    : e '+' e
+    : n
+    | e '+' e
         { $$ = $1 + $3; }
     | e '-' e
         { $$ = $1 - $3; }
@@ -216,7 +228,11 @@ e
         { $$ = -$2; }
     | '(' e ')'
         { $$ = $2; }
-    | id '(' ')'
+    | function
+    ;
+
+function
+    : id '(' ')'
         {{
             switch ($1) {
                 case 'rand_static':
@@ -271,7 +287,6 @@ e
                     throw new Error('function \'' + $1 + '\' is not defined');
             }
         }}
-    | n
     ;
 
 n

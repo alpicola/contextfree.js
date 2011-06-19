@@ -3,7 +3,9 @@ contextfree.js
 
 JavaScript Implementation of [Context Free](http://www.contextfreeart.org/).
 
-Almost compatible with Context Free 2.x, but tile directive and path directive are not supported yet.
+almost compatible with Context Free 2.x, but tile directive and path directive are not supported yet.
+
+see [demo](http://alpico.la/contextfree.js/).
 
 Usage
 -----
@@ -19,8 +21,6 @@ Usage
             });
         };
     </script>
-
-see [demo](http://alpico.la/contextfree.js/)
 
 License
 -------

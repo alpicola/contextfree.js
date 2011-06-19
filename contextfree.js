@@ -1,10 +1,8 @@
-var ContextFree;
-
-(function() {
+var ContextFree = (function() {
 
 'use strict';
 
-ContextFree = function(source, canvas) {
+function ContextFree(source, canvas) {
     this.canvas = canvas;
     this.context = canvas.getContext('2d');
     this.x = this.y = 0;
@@ -154,7 +152,7 @@ ContextFree = function(source, canvas) {
     } else if (!this.rules[this.startshape]) {
         throw new Error('rule \'' + this.startshape + '\' is not defined');
     }
-};
+}
 
 ContextFree.prototype.render = function(callback) {
     this.callback = callback;
@@ -512,5 +510,7 @@ function hsv2rgb(h, s, v, a) {
     }
     return [r, g, b, a];
 }
+
+return ContextFree;
 
 })();

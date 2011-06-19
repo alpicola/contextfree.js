@@ -27,9 +27,10 @@
 
                         var m, i = 0;
                         if (m = e.match(/error on line (\d+)/)) {
-                            source.value.split('\n').forEach(function(line, n) {
+                            source.value.split('\n').some(function(line, n) {
                                 if (m[1] == n + 1) {
                                     source.setSelectionRange(i, i + line.length);
+                                    return true;
                                 }
                                 i += line.length + 1;
                             });
