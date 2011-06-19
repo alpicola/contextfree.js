@@ -1,3 +1,10 @@
+/*
+ * contextfree.js v0.1.0
+ *
+ * Copyright (c) 2011 alpicola
+ * Licensed under the MIT license
+ */
+
 var ContextFree = (function() {
 
 'use strict';
