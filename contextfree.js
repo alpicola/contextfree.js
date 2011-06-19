@@ -23,7 +23,7 @@ ContextFree = function(source, canvas) {
             this.context.arc(0, 0, 0.5, 0, Math.PI * 2, false);
             this.context.fill();
         },
-        TRIANGLE: function(context) {
+        TRIANGLE: function() {
             this.context.beginPath();
             this.context.moveTo(0, 0.57735);
             this.context.lineTo(-0.5, -0.28828);
@@ -33,6 +33,7 @@ ContextFree = function(source, canvas) {
         }
     };
 
+    CFDG.yy.rand_static = Math.random();
     CFDG.parse(source).forEach(function(statement) {
         switch (statement[0]) {
             case 'STARTSHAPE':
@@ -246,6 +247,7 @@ ContextFree.prototype.drawShape = function() {
         this.x = -(this.left + this.right) / 2;
         this.y = -(this.top + this.bottom) / 2;
     }
+
     this.context.translate(this.canvas.width / 2, this.canvas.height / 2);
     this.context.scale(this.scale, -this.scale);
     this.context.translate(this.x, this.y);
@@ -255,7 +257,7 @@ ContextFree.prototype.drawShape = function() {
             var shape = this.shapes.pop();
             this.context.save();
             this.context.transform.apply(this.context, shape.transform);
-            this.context.fillStyle = 'rgba(' + hsv2rgb.apply(null, shape.color).join() + ')';
+            this.context.fillStyle = 'rgba(' + hsv2rgb.apply(null, shape.color) + ')';
             shape.render.call(this);
             this.context.restore();
         }

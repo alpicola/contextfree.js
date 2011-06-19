@@ -23,19 +23,21 @@
                         });
                         message.textContent = 'rendering...';
                     } catch (e) {
-                        var error = message.textContent = e.toString();
+                        message.textContent = e = e.toString();
+
                         var m, i = 0;
-                        if (m = error.match(/error on line (\d+)/)) {
+                        if (m = e.match(/error on line (\d+)/)) {
                             source.value.split('\n').forEach(function(line, n) {
-                                if (n == parseInt(m[1])-1) {
+                                if (m[1] == n + 1) {
                                     source.setSelectionRange(i, i + line.length);
                                 }
                                 i += line.length + 1;
                             });
-                        } else if (m = error.match(/'(\w+)' is not defined/)) {
+                        } else if (m = e.match(/'(\w+)' is not defined/)) {
                             i = source.value.search('\\b' + m[1] + '\\b');
                             source.setSelectionRange(i, i + m[1].length);
                         }
+                        source.focus();
                     }
                 }
 

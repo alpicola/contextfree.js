@@ -216,6 +216,16 @@ e
         { $$ = -$2; }
     | '(' e ')'
         { $$ = $2; }
+    | id '(' ')'
+        {{
+            switch ($1) {
+                case 'rand_static':
+                    $$ = yy.rand_static;
+                    break;
+                default:
+                    throw new Error('function \'' + $1 + '\' is not defined');
+            }
+        }}
     | id '(' e ')'
         {{
             switch ($1) {
@@ -238,6 +248,9 @@ e
                 case 'log10':
                     $$ = Math.log($3) * Math.LOG10E;
                     break;
+                case 'rand_static':
+                    $$ = $3 * yy.rand_static;
+                    break;
                 default:
                     throw new Error('function \'' + $1 + '\' is not defined');
             }
@@ -250,6 +263,9 @@ e
                     break;
                 case 'mod':
                     $$ = $3 % $5;
+                    break;
+                case 'rand_static':
+                    $$ = Math.min($3, $5) + Math.abs($3 - $5) * yy.rand_static;
                     break;
                 default:
                     throw new Error('function \'' + $1 + '\' is not defined');
