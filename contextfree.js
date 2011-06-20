@@ -13,8 +13,8 @@ function ContextFree(source, canvas) {
     this.canvas = canvas;
     this.context = canvas.getContext('2d');
     this.x = this.y = 0;
-    this.left = this.top = 0;
-    this.right = this.bottom = 0;
+    this.left = this.right = 0;
+    this.top = this.bottom = 0;
     this.width = this.height = 1;
     this.scale = Math.min(canvas.width, canvas.height);
     this.clip = false;
@@ -165,11 +165,10 @@ ContextFree.prototype.render = function(callback) {
     this.callback = callback;
 
     this.context.setTransform(1, 0, 0, 1, 0, 0);
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (this.background) {
         this.context.fillStyle = 'rgba(' + hsv2rgb.apply(null, this.background) + ')';
         this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    } else {
-        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
     this.expandShape();
