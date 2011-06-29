@@ -122,7 +122,7 @@ function ContextFree(source, canvas) {
                             this.canvas.width / this.width,
                             this.canvas.height / this.height
                         );
-                        if (n++ > 100 && this.queue.length > 1000) {
+                        if (n++ > 100 && this.shapes.length > 1000) {
                             n = 0;
                             this.shapes = this.shapes.filter(function(shape) {
                                 return shape.area * this.scale * this.scale > 0.3;
@@ -154,10 +154,12 @@ function ContextFree(source, canvas) {
         );
     }
 
-    if (!this.startshape) {
+    if (this.startshape) {
+        this.startshape = this.compileReplacement([
+            'REPLACEMENT', this.startshape, ['ADJUSTMENTS', []]
+        ]);
+    } else {
         throw new Error('startshape is not defined');
-    } else if (!this.rules[this.startshape]) {
-        throw new Error('rule \'' + this.startshape + '\' is not defined');
     }
 }
 
@@ -205,10 +207,10 @@ ContextFree.prototype.stop = function() {
     if (this.intervalID) {
         window.clearInterval(this.intervalID);
         this.intervalID = null;
-        if (this.callback) {
-            this.callback.call(null);
-            this.callback = null;
-        }
+    }
+    if (this.callback) {
+        this.callback.call(null);
+        this.callback = null;
     }
 };
 
@@ -219,17 +221,12 @@ ContextFree.prototype.expandShape = function() {
         [0, 0, 0, 1],
         0, 1
     ];
-    var startshape = this.compileReplacement([
-        'REPLACEMENT', this.startshape, ['ADJUSTMENTS', []]
-    ]);
-    this.queue = [function() { startshape.apply(this, modification); }]
+    this.stack = [function() { this.startshape.apply(this, modification); }];
     this.shapes = [];
 
     this.loop(function() {
-        if (this.queue.length) {
-            this.queue.pop().call(this);
-        }
-        return this.queue.length;
+        this.stack.pop().call(this);
+        return this.stack.length;
     }, this.drawShape);
 };
 
@@ -238,6 +235,11 @@ ContextFree.prototype.drawShape = function() {
     var i = 0, len = this.shapes.length;
     while (i < len && this.shapes[i].area * this.scale * this.scale < 0.3) i++;
     this.shapes.splice(0, i);
+
+    if (!this.shapes.length) {
+        this.stop();
+        return;
+    }
 
     if (!this.clip) {
         this.left = this.right = 0;
@@ -257,14 +259,12 @@ ContextFree.prototype.drawShape = function() {
     this.context.translate(this.x, this.y);
 
     this.loop(function() {
-        if (this.shapes.length) {
-            var shape = this.shapes.pop();
-            this.context.save();
-            this.context.transform.apply(this.context, shape.transform);
-            this.context.fillStyle = 'rgba(' + hsv2rgb.apply(null, shape.color) + ')';
-            shape.render.call(this);
-            this.context.restore();
-        }
+        var shape = this.shapes.pop();
+        this.context.save();
+        this.context.transform.apply(this.context, shape.transform);
+        this.context.fillStyle = 'rgba(' + hsv2rgb.apply(null, shape.color) + ')';
+        shape.render.call(this);
+        this.context.restore();
         return this.shapes.length;
     }, this.stop);
 };
@@ -306,7 +306,7 @@ ContextFree.prototype.compileReplacement = function(replacement) {
             }
 
             var modification = [transform, color, targetColor, z, zScale];
-            [].push.apply(this.queue, rule.replacements.map(function(replacement) {
+            [].push.apply(this.stack, rule.replacements.map(function(replacement) {
                 return function() { replacement.apply(this, modification); };
             }));
         };
@@ -321,7 +321,7 @@ ContextFree.prototype.compileReplacement = function(replacement) {
             var n = replacement[1];
             while (n--) (function() {
                 var modification = [transform, color, targetColor, z, zScale];
-                [].push.apply(this.queue, replacements.map(function(replacement) {
+                [].push.apply(this.stack, replacements.map(function(replacement) {
                     return function() { replacement.apply(this, modification); };
                 }));
 
