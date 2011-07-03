@@ -263,6 +263,7 @@ ContextFree.prototype.drawShape = function() {
         this.context.save();
         this.context.transform.apply(this.context, shape.transform);
         this.context.fillStyle = 'rgba(' + hsv2rgb.apply(null, shape.color) + ')';
+        this.context.scale(1.025, 1.025);
         shape.render.call(this);
         this.context.restore();
         return this.shapes.length;
