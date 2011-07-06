@@ -1,5 +1,5 @@
 /*
- * contextfree.js v0.1.0
+ * contextfree.js v0.1.1
  *
  * Copyright (c) 2011 alpicola
  * Licensed under the MIT license
