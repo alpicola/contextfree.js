@@ -139,11 +139,11 @@ function ContextFree(source, canvas) {
         if (name in this.primitives) continue;
 
         var sum = this.rules[name].reduce(function(sum, rule) {
-            return sum + rule.weight
+            return sum + rule.weight;
         }, 0);
         this.rules[name].forEach(function(rule) {
             rule.probability = rule.weight / sum;
-            rule.replacements = rule.replacements.map(this.compileReplacement, this);
+            rule.replacements = this.compileReplacements(rule.replacements);
         }, this);
     }
 
@@ -194,10 +194,10 @@ ContextFree.prototype.loop = function(loop, callback) {
         } while (Date.now() - start < 30 && v);
 
         if (!v) {
-            window.clearInterval(intervalID)
+            window.clearInterval(intervalID);
             callback.call(that);
         } else if (c++ > 3000) {
-            window.clearInterval(intervalID)
+            window.clearInterval(intervalID);
             throw new Error('too much shapes');
         }
     }, 30);
@@ -270,6 +270,17 @@ ContextFree.prototype.drawShape = function() {
     }, this.stop);
 };
 
+ContextFree.prototype.compileReplacements = function(replacements) {
+    return replacements.map(function(replacement, i) {
+        return {
+            replacement: replacement,
+            index: replacement[1] in this.primitives ? replacements.length - i : -1
+        };
+    }, this).sort(function(a, b) { return a.index - b.index; }).map(function(o) {
+        return this.compileReplacement(o.replacement);
+    }, this);
+};
+
 ContextFree.prototype.compileReplacement = function(replacement) {
     var adjustment = this.compileAdjustment(replacement[2]);
 
@@ -314,7 +325,7 @@ ContextFree.prototype.compileReplacement = function(replacement) {
     }
     
     if (replacement[0] == 'REPLACEMENT_LOOP') {
-        var replacements = replacement[3].map(this.compileReplacement, this);
+        var replacements = this.compileReplacements(replacement[3]);
         return function(transform, color, targetColor, z, zScale) {
             var area = Math.abs(transform[0] * transform[3] - transform[1] * transform[2]);
             if (area * this.scale * this.scale < 0.3) return;
